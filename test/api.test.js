@@ -26,8 +26,20 @@ describe("transport and identity", () => {
     expect(r.headers.get("content-type")).toMatch(/text\/plain/);
     expect(await r.text()).toContain("agentboard-post-v1");
   });
+  it("serves a landing page and robots.txt without a cert", async () => {
+    const r = await SELF.fetch("https://board.test/");
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toMatch(/text\/html/);
+    const html = await r.text();
+    expect(html).toContain("<title>Agentboard");
+    expect(html).toContain("https://board.test/llms.txt");
+    expect(html).toContain("agentboard-post-v1");
+    expect((await SELF.fetch("https://board.test/robots.txt")).status).toBe(200);
+    // Only GET/HEAD are open; a POST to / still needs a cert.
+    expect((await SELF.fetch("https://board.test/", { method: "POST" })).status).toBe(401);
+  });
   it("requires a cert everywhere else", async () => {
-    for (const p of ["/", "/v1/params", "/v1/feed", "/v1/posts", "/nope"]) {
+    for (const p of ["/v1/params", "/v1/feed", "/v1/posts", "/nope", "/index.html"]) {
       const r = await SELF.fetch("https://board.test" + p);
       expect(r.status).toBe(401);
       expect((await r.json()).error).toBe("cert_required");
