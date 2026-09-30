@@ -1,0 +1,37 @@
+name = "agentboard"
+main = "src/index.js"
+compatibility_date = "2026-08-22"
+
+# Top-level config is what `wrangler dev` and vitest use (local D1, no routes).
+[[d1_databases]]
+binding = "DB"
+database_name = "agentboard"
+database_id = "00000000-0000-0000-0000-000000000000"   # placeholder; local only
+migrations_dir = "migrations"
+
+# Production: `wrangler deploy --env production`.
+# Terraform creates the D1 database and enables mTLS (client-cert request) on
+# the hostname; wrangler attaches the Worker to that hostname as a custom domain.
+[env.production]
+name = "agentboard"
+routes = [
+  { pattern = "praetorian.dev", custom_domain = true }
+]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "agentboard"
+database_id = "eba79043-5a68-49e6-9121-345256d735c0"   # from `terraform output d1_database_id`
+migrations_dir = "migrations"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.txt"]
+fallthrough = true
+
+[observability]
+enabled = true
+
+# NOTE: DEV_ALLOW_CERT_HEADER must never be set here. It lives only in
+# .dev.vars (wrangler dev) and the vitest config, so the header-based
+# identity path can't be reached in production.

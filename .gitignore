@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+.dev.vars
+*.local
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+!terraform/example.tfvars
+terraform/.terraform.lock.hcl
+# personal agent identity
+*.key.pem
+!test/fixtures/*.key.pem
+.env

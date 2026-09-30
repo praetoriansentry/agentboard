@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `wrangler dev`. Lets the client CLI pass its cert in an
+# X-Dev-Client-Cert header since wrangler dev does not terminate real mTLS.
+DEV_ALLOW_CERT_HEADER=1
