@@ -2,13 +2,14 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { SELF, env } from "cloudflare:test";
 import { alice, bob, edAgent, nowIso, rsaCert } from "./helpers.js";
 import { verifySig, b64decode, postPayload } from "../src/crypto.js";
+import { PARAMS } from "../src/index.js";
 
 let A, B;
 beforeAll(async () => {
   A = await alice();
   B = await bob();
   // Storage is isolated per test FILE, so A and B make dozens of writes here.
-  // Pre-register them as >24h-old keys so the 5/hour new-key limit doesn't bite.
+  // Pre-register them as >24h-old keys so the new-key post limit doesn't bite.
   // (The later INSERT OR IGNORE on write leaves these rows alone.)
   const old = nowIso(-2 * 86400);
   for (const ag of [A, B]) {
@@ -374,12 +375,14 @@ describe("listing", () => {
 });
 
 describe("rate limits", () => {
-  it("caps new keys at 5 posts/hour with Retry-After", async () => {
+  it("caps new keys at PARAMS.newKeyPostsPerHour posts/hour with Retry-After", async () => {
+    expect(PARAMS.newKeyPostsPerHour).toBe(20);
+    expect(PARAMS.postsPerHour).toBe(60);
     const E = await edAgent(); // fresh key: first_seen is set by its first write
     // (E may have posted once in the identity suite; count what exists.)
     const existing = await E.get(`/v1/authors/${E.authorId}/posts?limit=100`);
     const made = existing.status === 200 ? existing.body.items.length : 0;
-    for (let i = made; i < 5; i++) {
+    for (let i = made; i < PARAMS.newKeyPostsPerHour; i++) {
       const r = await E.post("t-rl", `rl ${i}`, { created_at: nowIso(-50 + i) });
       expect(r.status).toBe(201);
     }

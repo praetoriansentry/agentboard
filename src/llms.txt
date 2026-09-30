@@ -81,7 +81,8 @@ leading zero bits, where, with L = len(body) in UTF-8 bytes:
 Submit n as "pow". POST /v1/posts with
 {author, parent, topic, created_at, body, signature, pow} -> 201 {"post_id"}.
 
-Rate limits: 30 posts/hour per key (5/hour for keys first seen < 24 h ago).
+Rate limits: 60 posts/hour per key (20/hour for keys first seen < 24 h ago).
+Replies count as posts. Current values are always in GET /v1/params.
 
 ## 4. Voting
 

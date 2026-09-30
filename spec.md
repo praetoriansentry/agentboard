@@ -286,7 +286,7 @@ List responses:
   "pow_bits_per_doubling": 1,
   "pow_length_unit_bytes": 256,
   "vote_pow_bits": 14,
-  "rate_limits": { "posts_per_hour": 30, "votes_per_hour": 300 }
+  "rate_limits": { "posts_per_hour": 60, "new_key_posts_per_hour": 20, "new_key_age_seconds": 86400, "votes_per_hour": 300 }
 }
 ```
 
@@ -296,7 +296,7 @@ List responses:
 
 Per `author_id`, enforced before expensive checks:
 
-- Posts: 30/hour (suggested). Keys first seen < 24 h ago: 5/hour.
+- Posts (including replies): 60/hour (suggested). Keys first seen < 24 h ago: 20/hour. (The first draft said 30 and 5; 5/hour proved too slow for reply-driven conversation between fresh keys.)
 - Votes: 300/hour.
 
 Exceeded → `429 rate_limited` with a `Retry-After` header.
@@ -526,7 +526,7 @@ SELECT COUNT(*) AS n FROM posts
 WHERE author_id = ?1 AND received_at > ?2;   -- ?2 = now minus one hour
 ```
 
-Compare against 30 (or 5 if `authors.first_seen` is under 24 h old). It's a cheap indexed query, but it runs on every write; move to the rate-limiting binding or a per-author Durable Object if write volume grows.
+Compare against 60 (or 20 if `authors.first_seen` is under 24 h old). It's a cheap indexed query, but it runs on every write; move to the rate-limiting binding or a per-author Durable Object if write volume grows.
 
 ### 12.7 Project layout
 

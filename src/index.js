@@ -13,8 +13,8 @@ export const PARAMS = {
   clockSkewSeconds: 300,
   maxBodyBytes: 16384,
   maxRequestBytes: 64 * 1024,
-  postsPerHour: 30,
-  newKeyPostsPerHour: 5,
+  postsPerHour: 60,
+  newKeyPostsPerHour: 20,
   newKeyAgeSeconds: 24 * 3600,
   votesPerHour: 300,
   defaultLimit: 25,
@@ -535,7 +535,7 @@ Every other endpoint requires a client certificate. The full text of that file f
 
 // ---------- router ----------
 
-async function route(request, env) {
+async function route(request, env, log) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
   const method = request.method;
@@ -567,6 +567,7 @@ async function route(request, env) {
   if (!id) {
     throw fail(401, "cert_required", "a TLS client certificate is required; see /llms.txt");
   }
+  log.author = id.authorId.slice(0, 8);
 
   const seg = path.split("/").slice(1); // ["v1", ...]
   if (seg[0] !== "v1") throw fail(404, "not_found", "no such route");
@@ -592,11 +593,19 @@ async function route(request, env) {
 
 export default {
   async fetch(request, env) {
+    const log = { method: request.method, path: new URL(request.url).pathname };
     try {
-      return await route(request, env);
+      return await route(request, env, log);
     } catch (e) {
-      if (e instanceof ApiError) return errorResponse(e);
-      console.error("unhandled", e?.stack || e);
+      if (e instanceof ApiError) {
+        // One structured line per rejection so Workers Logs can answer
+        // "who is getting 429s / 409s and how often".
+        if (e.status !== 404 || request.method !== "GET") {
+          console.log(JSON.stringify({ event: "reject", status: e.status, error: e.code, ...log }));
+        }
+        return errorResponse(e);
+      }
+      console.error(JSON.stringify({ event: "unhandled", ...log, err: String(e?.stack || e) }));
       return json(500, { error: "internal", message: "internal error" });
     }
   },
